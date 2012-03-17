@@ -3,11 +3,58 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
-<title></title>
+<title>Three Brothers</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<link rel='stylesheet' href='stylesheets/game.css' type='text/css' />
+<script>
+var BrowserDetect={init:function(){this.browser=this.searchString(this.dataBrowser)||"An unknown browser";this.version=this.searchVersion(navigator.userAgent)||this.searchVersion(navigator.appVersion)||"an unknown version";this.OS=this.searchString(this.dataOS)||"an unknown OS"},searchString:function(a){for(var b=0;b<a.length;b++){var c=a[b].string;var d=a[b].prop;this.versionSearchString=a[b].versionSearch||a[b].identity;if(c){if(c.indexOf(a[b].subString)!=-1)return a[b].identity}else if(d)return a[b].identity}},searchVersion:function(a){var b=a.indexOf(this.versionSearchString);if(b==-1)return;return parseFloat(a.substring(b+this.versionSearchString.length+1))},dataBrowser:[{string:navigator.userAgent,subString:"Chrome",identity:"Chrome"},{string:navigator.userAgent,subString:"OmniWeb",versionSearch:"OmniWeb/",identity:"OmniWeb"},{string:navigator.vendor,subString:"Apple",identity:"Safari",versionSearch:"Version"},{prop:window.opera,identity:"Opera",versionSearch:"Version"},{string:navigator.vendor,subString:"iCab",identity:"iCab"},{string:navigator.vendor,subString:"KDE",identity:"Konqueror"},{string:navigator.userAgent,subString:"Firefox",identity:"Firefox"},{string:navigator.vendor,subString:"Camino",identity:"Camino"},{string:navigator.userAgent,subString:"Netscape",identity:"Netscape"},{string:navigator.userAgent,subString:"MSIE",identity:"Explorer",versionSearch:"MSIE"},{string:navigator.userAgent,subString:"Gecko",identity:"Mozilla",versionSearch:"rv"},{string:navigator.userAgent,subString:"Mozilla",identity:"Netscape",versionSearch:"Mozilla"}],dataOS:[{string:navigator.platform,subString:"Win",identity:"Windows"},{string:navigator.platform,subString:"Mac",identity:"Mac"},{string:navigator.userAgent,subString:"iPhone",identity:"iPhone/iPod"},{string:navigator.platform,subString:"Linux",identity:"Linux"}]};BrowserDetect.init();
+
+var PLATFORM = 'web';
+</script>
+<script src="javascripts/modernizr.js"></script>
+<script src="javascripts/debug.js"></script>
+<script src="javascripts/jquery-1.7.1.min.js"></script>
+<script src="javascripts/underscore.js"></script>
+<script src="javascripts/jstorage.js"></script>
+<script src="javascripts/sound.js"></script>
+<script src="javascripts/map.js"></script>
+<script src="javascripts/game.js"></script>
+<script src="javascripts/entities.js"></script>
 </head>
 
 <body>
+
+  <div id="all">
+
+    <div id="intro" class="screen"></div>
+
+    <div id="game" class="screen">
+      
+      <h2 class="bttn mute">Mute</h2>
+      <h2 class="bttn pause">Pause</h2>
+      <h2 class="bttn quit">Quit</h2>
+      <h2 class="bttn restart">Try Again</h2>
+    
+      <div id="messages"><h1>Starting ...</h1></div>
+
+      <div id="score" title="Score" style="right:-135px">0</div>
+      <div id="high_score" class="high_score" title="High Score" style="right:-135px">0</div>
+
+      <canvas id="foreground" width="480" height="320"></canvas>
+      <canvas id="background" width="480" height="320"></canvas>
+      <canvas id="landscape"  width="480" height="320"></canvas>
+      <canvas id="skyscape"   width="480" height="320"></canvas>
+
+    </div>
+
+
+  </div>
+
+  <script>
+  $(function(){
+    Game.initialize(true, MAPS);
+  });
+  </script>
 
 </body>
 

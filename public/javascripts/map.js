@@ -9,8 +9,8 @@ MAPS = [{
   floor              : 75, // height from bottommost
   increment_on_frame : 24,
   item_odds          : 0.3,
-  item_tracks        : [ 20, 40, 60, 100 ],
-  max_items          : 1,
+  item_tracks        : [ 20, 40, 65, 100 ],
+  max_items          : 10,
   items              : {
     'blue'           : {  name     : 'blue',
                           liked_by : 'slim',
@@ -43,8 +43,8 @@ MAPS = [{
                           // type   : [[ frame_number, tick_count, change_per_tick, hitbox_x, hitbox_y, hitbox_w, hitbox_h ]]
                             idle    : [[ 0, 24,  0,  10,   5,  20, 50 ],
                                        [ 1, 24,  0,  10,   5,  20, 50 ]], 
-                            crouch  : [[ 2, 12,  0,   8,  20,  28, 35 ]],
-                            jump    : [[ 3, 8,  -7,  10,   5,  20, 50 ],
+                            crouch  : [[ 2, 12,  0,   8,  20,  28, 32 ]],
+                            jump    : [[ 3, 4,  -14, 10,   5,  20, 50 ],
                                        [ 4, 4,  -2,  10,   5,  20, 50 ],
                                        [ 4, 4,   0,  10,   5,  20, 50 ],
                                        [ 4, 4,   2,  10,   5,  20, 50 ],
@@ -63,7 +63,7 @@ MAPS = [{
                             idle    : [[ 0, 19,  0,  5,  5,  30, 40 ],
                                        [ 1, 23,  0,  5,  5,  30, 40 ]], 
                             crouch  : [[ 2, 12,  0,  5,  5,  30, 40 ]], 
-                            jump    : [[ 3, 8,  -4,  5,  5,  30, 40 ],
+                            jump    : [[ 3, 4,  -8,  5,  5,  30, 40 ],
                                        [ 4, 4,  -2,  5,  5,  30, 40 ],
                                        [ 4, 4,   0,  5,  5,  30, 40 ],
                                        [ 4, 4,   2,  5,  5,  30, 40 ],
@@ -82,7 +82,7 @@ MAPS = [{
                             idle    : [[ 0, 29,  0,  10,  5,  20, 50 ],
                                        [ 1, 31,  0,  10,  5,  20, 50 ]], 
                             crouch  : [[ 2, 12,  0,   8, 20,  28, 40 ]], 
-                            jump    : [[ 3, 8,  -7,  10,  5,  20, 50 ],
+                            jump    : [[ 3, 4,  -14,  10,  5,  20, 50 ],
                                        [ 4, 4,  -2,  10,  5,  20, 50 ],
                                        [ 4, 4,   0,  10,  5,  20, 50 ],
                                        [ 4, 4,   2,  10,  5,  20, 50 ],
@@ -91,23 +91,32 @@ MAPS = [{
                         }
   },
   background  : {
-    speed_mod : 0.5,
+    canvas    : 'background',
+    speed_mod : 0.8,
+    use_floor : true,
     assets    : [ 
-      [ 'tree.png', 7 ], 
-      [ 'house.png', 3 ]
+      { name : 'tree1', sprite : 'demo_tree_01.png', odds : 1, width : 147, height : 203 },
+      { name : 'tree2', sprite : 'demo_tree_02.png', odds : 1, width : 57,  height : 220 }, 
+      { name : 'tree3', sprite : 'demo_tree_03.png', odds : 1, width : 180, height : 229 }, 
+      { name : 'tree4', sprite : 'demo_tree_04.png', odds : 1, width : 72,  height : 205 } 
     ]
   },
   landscape   : {
+    canvas    : 'landscape',
     speed_mod : 0.2,
+    use_floor : true,
     assets    : [ 
-      [ 'demo_mountains_01.png', 1 ],
-      [ 'demo_mountains_02.png', 1 ] 
+      { name : 'mountain1', sprite : 'demo_mountains_01.png', odds : 1, width : 902, height : 221 },
+      { name : 'mountain2', sprite : 'demo_mountains_02.png', odds : 1, width : 967, height : 240 } 
     ]
   },
   skyscape    : {
+    canvas    : 'skyscape',
     speed_mod : 0.1,
+    use_floor : false,
     assets    : [
-      [ 'cloud.png', 1 ] 
+      { name : 'cloud1', sprite : 'demo_clouds_01.png', odds : 1, width : 211, height : 86 },
+      { name : 'cloud2', sprite : 'demo_clouds_02.png', odds : 1, width : 162, height : 86 }
     ]
   }
 }];

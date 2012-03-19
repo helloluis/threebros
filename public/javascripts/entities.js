@@ -7,7 +7,7 @@ var Brother = function(brother_hash, context) {
   this.width          = brother_hash.width;
   this.height         = brother_hash.height;
   this.sprite         = brother_hash.sprite;
-  this.position       = brother_hash.position;
+  this.position       = brother_hash.position; // [ x, y ] 
   
   this.animation      = brother_hash.animation;
   this.animate_idle   = brother_hash.animation.idle;
@@ -33,6 +33,7 @@ var Brother = function(brother_hash, context) {
   this.is_crouching   = false;
   this.is_falling     = false;
   this.is_dead        = false;
+  this.state          = 'idle';
   
   this.color          = "#ffcc00";
   
@@ -47,12 +48,33 @@ var Brother = function(brother_hash, context) {
     
     this.image = new Image();
     this.image.src = Game.images_dir + this.sprite.asset;
+    
+    this.make_hitbox();
 
   };
 
-  this.initialize_hitbox = function() {
+  this.make_hitbox = function() {
 
-    // initialize hitbox
+    switch (this.state) {
+      case "idle": 
+        var cur_f = this.idle_current_f;
+      break;
+      case "jump":
+        var cur_f = this.jump_current_f;
+      break;
+      case "crouch":
+        var cur_f = this.crouch_current_f;
+      break;
+    }
+
+    this.hitbox = { 
+      x : Game.normalize_x(this.position[0] + this.animation[this.state][cur_f][3]),
+      y : Game.normalize_y(this.position[1] + this.animation[this.state][cur_f][4], this.height),
+      w : this.animation[this.state][cur_f][5],
+      h : this.animation[this.state][cur_f][6]
+    };
+    //console.log(this.state, cur_f);
+    //console.log(this.hitbox.x, this.hitbox.y, this.hitbox.w, this.hitbox.h);
 
   };
 
@@ -95,6 +117,7 @@ var Brother = function(brother_hash, context) {
       } else {
         this.idle_current_f = 0; // idling loops
       }
+      this.make_hitbox();
       this.last_game_tick = Game.ticks;
     }
 
@@ -110,6 +133,7 @@ var Brother = function(brother_hash, context) {
       } else {
         this.idle();
       }
+      this.make_hitbox();
       this.last_game_tick = Game.ticks;
     }
 
@@ -125,6 +149,7 @@ var Brother = function(brother_hash, context) {
       } else {
         this.idle();
       }
+      this.make_hitbox();
       this.last_game_tick = Game.ticks;
     }
 
@@ -153,26 +178,36 @@ var Brother = function(brother_hash, context) {
 
   this.idle = function() {
 
-    console.log(this.name + ' idle!', this.is_idle);
+    //console.log(this.name + ' idle!', this.is_idle);
 
     if (this.is_idle == false) {
+      
       this.reset_current_f();
       this.is_idle = true;
       this.is_jumping = false;
       this.is_crouching = false;
+      
+      this.state = 'idle';
+      this.make_hitbox();
+
     }
 
   };
 
   this.jump = function() {
     
-    console.log(this.name + ' jump!', this.is_jumping);
+    //console.log(this.name + ' jump!', this.is_jumping);
 
     if (this.is_jumping == false && this.is_crouching == false) {
+      
       this.reset_current_f();
       this.is_idle = false;
       this.is_jumping = true;
       this.is_crouching = false;
+
+      this.state = 'jump';
+      this.make_hitbox();
+
     }
     
   };
@@ -180,13 +215,18 @@ var Brother = function(brother_hash, context) {
   this.crouch = function(){
 
     if (this.can_crouch===true) {
-      console.log(this.name + ' crouch!');
+      //console.log(this.name + ' crouch!');
 
       if (this.is_crouching == false && this.is_jumping == false) {
+        
         this.reset_current_f();
         this.is_idle = false;
         this.is_jumping = false;
         this.is_crouching = true;
+        
+        this.state = 'crouch';
+        this.make_hitbox();
+
       }
     }
 
@@ -242,6 +282,8 @@ var Item = function(item_hash, context) {
   this.origin     = item_hash.origin;
   this.current    = item_hash.origin;
   this.dest       = [ Game.width, item_hash.origin[1] ];
+  
+  this.marked_for_deletion = false;
 
   this.context    = context;
 
@@ -256,7 +298,7 @@ var Item = function(item_hash, context) {
     if (this.current[0] < this.dest[0]) {
       this.current[0] += this.speed;  
     } else {
-      this.remove();
+      this.marked_for_deletion = true;
     }
 
     this.context.drawImage(
@@ -274,33 +316,33 @@ var Item = function(item_hash, context) {
 
   this.detect_collision_with_brothers = function(){
     
-    if (this.current[0] > Game.brothers.slim.position[0]-100) {
+    var self = this;
 
-      var self1  = [this.current[0], this.current[0] + this.width],
-          self2  = [this.current[1], this.current[1] + this.height];
+    if (this.current[0] > Game.width/2) {
 
-      if (!this.detect_collision_with_brother( Game.brothers.slim, self1, self2 )) {
-        if (!this.detect_collision_with_brother( Game.brothers.fat, self1, self2 )) {
-          this.detect_collision_with_brother( Game.brothers.tall, self1, self2 );
-        }
-      }
+      var norm_y = Game.normalize_y(this.current[1], this.height),
+          self1  = [this.current[0], this.current[0] + this.width],
+          self2  = [norm_y, norm_y + this.height];
 
+      _.each( Game.brothers, function(brother, name){
+        self.detect_collision_with_brother(brother, self1, self2);
+      });
+      
     }
 
   };
 
   this.detect_collision_with_brother = function( brother, self1, self2 ) {
 
-    var cur_l       = Game.normalize_x(brother.position[0]),
-        cur_t       = brother.position[1],
-        p1          = [cur_l, cur_l + brother.width  ],
-        p2          = [cur_t, cur_t + brother.height ],
+    var p1          = [ brother.hitbox.x, brother.hitbox.x + brother.hitbox.w ],
+        p2          = [ brother.hitbox.y, brother.hitbox.y + brother.hitbox.h ],
         horiz_match = Game.compare_positions( self1, p1 ),
         vert_match  = Game.compare_positions( self2, p2 );
     
     // console.log('match', horiz_match, vert_match);
-    console.log(self1, cur_l, cur_t, brother.name);
+    // console.log(self1, self2, brother.hitbox.x, brother.hitbox.y, brother.name);
     if (horiz_match && vert_match) {
+      //console.log(self1, self2, brother.hitbox.x, brother.hitbox.y, brother.name);
       return this.collide(); 
     } else {
       return false;  
@@ -309,12 +351,8 @@ var Item = function(item_hash, context) {
   };
 
   this.collide = function(){
-    console.log('collide!');
-    this.remove();  
-  };
-
-  this.remove = function(){
-    Game.factory.remove(this);
+    this.marked_for_deletion = true;
+    console.log(this.marked_for_deletion);
   };
 
 };
@@ -327,6 +365,7 @@ var ItemFactory   = function(tracks, items, context) {
   this.context    = context;
   this.animating_items = [];
   this.paused     = false;
+  this.frequency  = 3000;
 
   this.initialize = function(){
     
@@ -337,12 +376,14 @@ var ItemFactory   = function(tracks, items, context) {
       self.items[k].image.src = Game.images_dir + v.sprite.asset;
     });
 
-    Game.viewport.everyTime(3000, function(){
+    Game.viewport.everyTime(this.frequency, function(){
       if (!self.paused && self.animating_items.length < Game.map.max_items) {
         self.generate();
-        self.paused = true;  
+        //self.paused = true;
       }
     });
+
+    self.generate();
 
   };
 
@@ -376,24 +417,135 @@ var ItemFactory   = function(tracks, items, context) {
       item.animate();
     });
 
+    this.cleanup();
+
+  };
+
+  this.cleanup = function(){
+    var self = this;
+    _.map(this.animating_items,function(item){
+      if (item.marked_for_deletion) {
+        self.remove(item);
+      }
+    });
   };
 
   this.remove      = function(item){
-
-    console.log('removing ', item);
     this.animating_items.splice( _.indexOf(this.animating_items, item), 1 );
-
   };
 
 };
 
-var Background = function(speed, assets) {
+var Backgrounder  = function(hash) {
 
-  this.speed   = speed;
-  this.canvas  = document.getElementById('background');
-  this.context = this.canvas.getContext('2d');
+  this.speed_mod  = hash.speed_mod;
+  this.assets     = hash.assets;
+  this.canvas     = document.getElementById(hash.canvas);
+  this.context    = this.canvas.getContext('2d');
+  this.floor      = hash.use_floor ? Game.height : false;
+  
+  this.animating_items = [];
 
   this.initialize = function(){
+
+    var self = this;
+
+    _.each(this.assets, function(asset, k){
+      self.assets[k].image = new Image();
+      self.assets[k].image.src = Game.images_dir + asset.sprite;
+    });
+
+    this.frequency  = (Game.width/this.speed())*10;
+
+    $("#" + hash.canvas).everyTime(this.frequency, function(){
+      self.generate();
+    });
+
+    self.generate((Game.width/2)+Math.round(Math.random()*(Game.width/4)));
+
+  };
+
+  this.generate  = function(force_current){
+    
+    var self             = this,
+        num              = Math.floor(Math.random()*self.assets.length),
+        selected         = _.clone(self.assets[num]);
+        norm_y           = self.floor ? self.normalize_y(0, selected.height) : Math.round(Math.random()*Game.floor),
+        selected.origin  = [ -selected.width, norm_y ];
+        selected.current = [ (force_current ? force_current : -selected.width), norm_y ];
+        selected.dest    = [ Game.width, norm_y ];
+
+    console.log(selected.name, selected.current[0]);
+    self.animating_items.push(selected);
+    
+  };
+
+  this.speed = function(){
+    return Game.speed*this.speed_mod;
+  };
+
+  this.animate = function(){
+    var self = this;
+    
+    _.each(self.animating_items, function(item){
+      
+      if (item.current[0] < item.dest[0]) {
+        item.current[0]+=self.speed();
+
+        self.context.drawImage(
+          item.image,  
+          item.current[0], 
+          item.current[1]
+        );  
+
+      } else {
+        item.mark_for_deletion = true;
+      }
+
+    });
+
+    self.cleanup();
+  };
+
+  this.normalize_y = function(h, y){
+    h = h ? h : 0;
+    return (this.floor-h)-y;
+  };
+
+  this.cleanup = function(){
+    var self = this;
+    _.map(this.animating_items,function(){
+      if (this.marked_for_deletion) {
+        self.remove(this);
+      }
+    });
+  };
+
+  this.remove = function(item) {
+    console.log('removing landscape item', item.name, this.animating_items.length);
+    this.animating_items.splice( _.indexOf(this.animating_items, item), 1);
+  };
+
+};
+
+var Background    = function(background_hash) {
+
+  this.speed_mod  = background_hash.speed_mod;
+  this.speed      = Game.speed * this.speed_mod;
+  this.assets     = background_hash.assets;
+  this.canvas     = document.getElementById('background');
+  this.context    = this.canvas.getContext('2d');
+
+  this.initialize = function(){
+    
+    var self = this;
+
+    _.each(this.assets, function(asset, k){
+      self.assets[k].image = new Image();
+      self.assets[k].image.src = Game.images_dir + asset.sprite;
+    });
+
+    console.log(self.assets);
 
   };
 
@@ -403,18 +555,85 @@ var Background = function(speed, assets) {
 
 };
 
-var Landscape  = function(speed, assets) {
+var Landscape     = function(landscape_hash, context) {
 
-  this.speed   = speed;
-  this.canvas  = document.getElementById('landscape');
-  this.context = this.canvas.getContext('2d');
+  this.speed_mod  = landscape_hash.speed_mod;
+  this.speed      = Game.speed * this.speed_mod;
+  this.assets     = landscape_hash.assets;
+  this.canvas     = document.getElementById('landscape');
+  this.context    = this.canvas.getContext('2d');
+  this.floor      = Game.height;
+  
+  this.frequency  = (Game.width/this.speed)*10;
+  this.animating_items = [];
 
   this.initialize = function(){
 
+    var self = this;
+
+    _.each(this.assets, function(asset, k){
+      self.assets[k].image = new Image();
+      self.assets[k].image.src = Game.images_dir + asset.sprite;
+    });
+
+    console.log(self.frequency);
+
+    $("#landscape").everyTime(this.frequency, function(){
+      self.generate();
+    });
+
+    self.generate((Game.width/2)+Math.round(Math.random()*(Game.width/4)));
+
+  };
+
+  this.generate  = function(force_current){
+    
+    var self     = this,
+        num      = Math.floor(Math.random()*self.assets.length),
+        selected = _.clone(self.assets[num]);
+        selected.origin  = [ -selected.width, self.normalize_y(0, selected.height) ];
+        selected.current = [ (force_current ? force_current : -selected.width), self.normalize_y(0, selected.height) ];
+        selected.dest    = [ Game.width, self.normalize_y(0, selected.height) ];
+
+    console.log(selected.name, selected.current[0]);
+    self.animating_items.push(selected);
+    
+  };
+
+  this.speed = function(){
+    return Game.speed*this.speed_mod;
   };
 
   this.animate = function(){
+    var self = this;
+    
+    _.each(self.animating_items, function(item){
+      
+      if (item.current[0] < item.dest[0]) {
+        item.current[0]+=self.speed();
 
+        self.context.drawImage(
+          item.image,  
+          item.current[0], 
+          item.current[1]
+        );  
+
+      } else {
+        self.remove(item);
+      }
+
+    });
+
+  };
+
+  this.normalize_y = function(h, y){
+    h = h ? h : 0;
+    return (this.floor-h)-y;
+  };
+
+  this.remove = function(item) {
+    console.log('removing landscape item', item.name, this.animating_items.length);
+    this.animating_items.splice( _.indexOf(this.animating_items, item), 1);
   };
 
 };
@@ -434,17 +653,6 @@ var Skyscape   = function(speed, assets) {
   };
 
 };
-
-
-
-
-
-
-
-
-
-
-
 
 
 

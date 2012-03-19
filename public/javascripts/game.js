@@ -85,8 +85,6 @@ var Game = {
 
     Game.initialize_sounds();
 
-    Game.initialize_controls();
-
     Game.initialize_canvas();
 
     if (auto_start===true) {
@@ -152,13 +150,23 @@ var Game = {
 
     if (Game.is_web) {
 
-      $(document).
-        bind('keydown', 'g', bro1_jump).
-        bind('keydown', 'h', bro2_jump).
-        bind('keydown', 'j', bro3_jump).
-        bind('keydown', 'b', bro1_duck).
-        bind('keydown', 'n', bro2_duck).
-        bind('keydown', 'm', bro3_duck);
+      if (Game.brothers.slim) {
+        $(document).
+          bind('keydown', 'g', bro1_jump).
+          bind('keydown', 'b', bro1_duck);  
+      }
+
+      if (Game.brothers.fat) {
+        $(document).
+          bind('keydown', 'h', bro2_jump).
+          bind('keydown', 'n', bro2_duck);  
+      }
+      
+      if (Game.brothers.tall) {
+        $(document).
+          bind('keydown', 'j', bro3_jump).
+          bind('keydown', 'm', bro3_duck);  
+      }
 
     } else if (Game.is_ios) {
 
@@ -322,9 +330,9 @@ var Game = {
 
   initialize_scapes    : function() {
 
-    Game.background = new Background( Game.map.background_speed, Game.map.background_assets );
-    Game.landscape  = new Landscape(  Game.map.landscape_speed,  Game.map.landscape_assets  );
-    Game.skyscape   = new Skyscape(   Game.map.skyscape_speed,   Game.map.skyscape_assets   );
+    Game.background = new Backgrounder( Game.map.background );
+    Game.landscape  = new Backgrounder( Game.map.landscape  );
+    Game.skyscape   = new Backgrounder( Game.map.skyscape   );
 
     Game.background.initialize();
     Game.landscape.initialize();
@@ -339,11 +347,15 @@ var Game = {
 
       Game.ticks+=1;
 
-      Game.brothers.slim.animate();
-      Game.brothers.fat.animate();
-      Game.brothers.tall.animate();
+      _.each(Game.brothers,function(brother,name){
+        brother.animate();
+      });
 
       Game.factory.animate();
+
+      Game.background.animate();
+      Game.landscape.animate();
+      Game.skyscape.animate();
 
       //new frame
       requestAnimFrame(function(){
@@ -356,6 +368,9 @@ var Game = {
   clear_canvases       : function() {
     
     Game.context.clearRect(0, 0, Game.width, Game.height);
+    Game.background.context.clearRect(0, 0, Game.width, Game.height);
+    Game.landscape.context.clearRect(0, 0, Game.width, Game.height);
+    Game.skyscape.context.clearRect(0, 0, Game.width, Game.height);
 
   },
 
@@ -373,6 +388,7 @@ var Game = {
 
     Game.initialize_factory();
     Game.initialize_brothers();
+    Game.initialize_controls();
     Game.initialize_scapes();
 
     Game.animate();
@@ -569,12 +585,8 @@ var Game = {
 
   // we measure everything from the bottom, instead of the top
   // so we can stage jumps and crouches better. 
-  normalize : function(h, y) {
-    return (Game.floor-h)+y;
-  },
-
   normalize_x : function(x){
-    if (Game.width > Game.min_width) {
+    if (Game.width > Game.min_width) { 
       return (Game.width-Game.min_width)+x;
     } else {
       return x;

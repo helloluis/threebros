@@ -1,6 +1,6 @@
 var Game = {
   
-  debug                : false,  // set to TRUE to visualize barriers and intersections
+  debug                : true,  // set to TRUE to visualize barriers and intersections
   debug_cont           : false,
   debug_visually       : false,  // set to TRUE to actually write debug messages to an in-game DIV
   debug_log            : false,  // set to TRUE to write logs to the console
@@ -26,8 +26,16 @@ var Game = {
 
   seconds              : 0,     // global timer, in seconds, so only increments once every 1000 millisec
 
-  width                : 0,
-  height               : 0,
+  max_width            : 1024,
+  max_height           : 768,
+  min_width            : 480,
+  min_height           : 320,
+  
+  width                : $(window).width(),
+  height               : $(window).height(),
+
+  fill_viewport        : true,
+
   speed                : 0,
   item_odds            : 0,
 
@@ -36,8 +44,8 @@ var Game = {
   ended                : false,
   muted                : false,
 
-  images_dir           : "",
-  sounds_dir           : "",
+  images_dir           : "images/",
+  sounds_dir           : "sounds/",
 
   is_touch_device      : (navigator.platform.indexOf("iPad") != -1), // is this a desktop browser or an iPad?
 
@@ -63,6 +71,8 @@ var Game = {
 
     Game.initialize_animation_frame();
 
+    Game.initialize_viewport();
+
     Game.initialize_menus();
 
     Game.initialize_containers();
@@ -82,6 +92,32 @@ var Game = {
     if (auto_start===true) {
       Game.start_countdown();
     }
+  },
+
+  initialize_viewport : function(){
+
+    this.viewport = $("#all");
+    
+    var win = $(window);
+
+    if (win.width() > Game.max_width) {
+      this.viewport.width( Game.max_width );
+      Game.width = Game.max_width;
+    } else {
+      this.viewport.width( win.width() );
+      Game.width = win.width();
+    }
+
+    if (win.height() > Game.max_height) {
+      this.viewport.height( Game.max_height );
+      Game.height = Game.max_height;
+    } else {
+      this.viewport.height( win.height() );
+      Game.height = win.height();
+    }
+
+    console.log(this.viewport.width(), this.viewport.height());
+
   },
 
   initialize_animation_frame : function(){
@@ -106,7 +142,30 @@ var Game = {
   },
 
   initialize_controls   : function() {
-    // TODO
+
+    var bro1_jump = function(){ Game.brothers.slim.jump();   },
+        bro2_jump = function(){ Game.brothers.fat.jump();    },
+        bro3_jump = function(){ Game.brothers.tall.jump();   },
+        bro1_duck = function(){ Game.brothers.slim.crouch(); },
+        bro2_duck = function(){ Game.brothers.fat.crouch();  },
+        bro3_duck = function(){ Game.brothers.tall.crouch(); };
+
+    if (Game.is_web) {
+
+      $(document).
+        bind('keydown', 'g', bro1_jump).
+        bind('keydown', 'h', bro2_jump).
+        bind('keydown', 'j', bro3_jump).
+        bind('keydown', 'b', bro1_duck).
+        bind('keydown', 'n', bro2_duck).
+        bind('keydown', 'm', bro3_duck);
+
+    } else if (Game.is_ios) {
+
+      // TODO: No idea.
+
+    }
+
   },
 
   initialize_containers : function() {
@@ -229,8 +288,21 @@ var Game = {
 
   initialize_canvas    : function() {
 
-    Game.canvas = document.getElementById('foreground');
+    $("#canvases")
+      .append("<canvas id=\"foreground\" width=\"" + Game.width + "\" height=\"" + Game.height + "\"></canvas>")
+      .append("<canvas id=\"background\" width=\"" + Game.width + "\" height=\"" + Game.height + "\"></canvas>")
+      .append("<canvas id=\"landscape\" width=\""  + Game.width + "\" height=\"" + Game.height + "\"></canvas>")
+      .append("<canvas id=\"skyscape\" width=\""   + Game.width + "\" height=\"" + Game.height + "\"></canvas>");
+    
+    Game.canvas  = document.getElementById('foreground');
     Game.context = Game.canvas.getContext('2d');
+
+  },
+
+  initialize_factory   : function() {
+
+    Game.factory = new ItemFactory(Game.map.item_tracks, Game.map.items, Game.context);
+    Game.factory.initialize();
 
   },
 
@@ -238,9 +310,9 @@ var Game = {
 
     Game.brothers      = {};
     
-    Game.brothers.slim = new Brother(Game.map.brothers.slim, Game.canvas);
-    Game.brothers.fat  = new Brother(Game.map.brothers.fat,  Game.canvas);
-    Game.brothers.tall = new Brother(Game.map.brothers.tall, Game.canvas);
+    Game.brothers.slim = new Brother(Game.map.brothers.slim, Game.context);
+    Game.brothers.fat  = new Brother(Game.map.brothers.fat,  Game.context);
+    Game.brothers.tall = new Brother(Game.map.brothers.tall, Game.context);
 
     Game.brothers.slim.initialize();
     Game.brothers.fat.initialize();
@@ -263,11 +335,15 @@ var Game = {
   animate              : function() {
     if (Game.started && !Game.paused && !Game.ended) {
       
+      Game.clear_canvases();
+
       Game.ticks+=1;
 
       Game.brothers.slim.animate();
       Game.brothers.fat.animate();
       Game.brothers.tall.animate();
+
+      Game.factory.animate();
 
       //new frame
       requestAnimFrame(function(){
@@ -277,17 +353,25 @@ var Game = {
     }
   },
 
+  clear_canvases       : function() {
+    
+    Game.context.clearRect(0, 0, Game.width, Game.height);
+
+  },
+
   start                : function() {
     
     // load map hash
     Game.map        = Game.maps[0];
     Game.speed      = Game.map.speed;
     Game.item_odds  = Game.map.item_odds;
+    Game.floor      = Game.height - 75;
     
     Game.started    = true;
     Game.paused     = false;
     Game.ended      = false;
 
+    Game.initialize_factory();
     Game.initialize_brothers();
     Game.initialize_scapes();
 
@@ -486,11 +570,34 @@ var Game = {
   // we measure everything from the bottom, instead of the top
   // so we can stage jumps and crouches better. 
   normalize : function(h, y) {
-    return Game.floor-y;
+    return (Game.floor-h)+y;
+  },
+
+  normalize_x : function(x){
+    if (Game.width > Game.min_width) {
+      return (Game.width-Game.min_width)+x;
+    } else {
+      return x;
+    }
+  },
+
+  normalize_y : function(y, h){
+    if (Game.height > Game.min_height) {
+      h = h ? h : 0;
+      return (Game.floor-h)-y;
+    } else {
+      return y;  
+    }
   },
 
   end : function() {
 
+  },
+
+  compare_positions : function(p1, p2){
+    var x1 = p1[0] < p2[0] ? p1 : p2;
+    var x2 = p1[0] < p2[0] ? p2 : p1;
+    return x1[1] > x2[0] || x1[0] === x2[0] ? true : false;
   },
 
   log : function(messages) {

@@ -16,6 +16,8 @@ var PLATFORM = 'web';
 <script src="javascripts/jquery-1.7.1.min.js"></script>
 <script src="javascripts/underscore.js"></script>
 <script src="javascripts/jstorage.js"></script>
+<script src="javascripts/jquery-hotkeys.js"></script>
+<script src="javascripts/jquery-timers.js"></script>
 <script src="javascripts/sound.js"></script>
 <script src="javascripts/map.js"></script>
 <script src="javascripts/game.js"></script>
@@ -26,10 +28,14 @@ var PLATFORM = 'web';
 
   <div id="all">
 
+
+
     <div id="intro" class="screen"></div>
 
     <div id="game" class="screen">
       
+      <div id="developer"> jumps: G, H, J | ducks: B, N, M </div>
+
       <h2 class="bttn mute">Mute</h2>
       <h2 class="bttn pause">Pause</h2>
       <h2 class="bttn quit">Quit</h2>
@@ -39,11 +45,11 @@ var PLATFORM = 'web';
 
       <div id="score" title="Score" style="right:-135px">0</div>
       <div id="high_score" class="high_score" title="High Score" style="right:-135px">0</div>
+      
+      <div id="train"></div>
 
-      <canvas id="foreground" width="480" height="320"></canvas>
-      <canvas id="background" width="480" height="320"></canvas>
-      <canvas id="landscape"  width="480" height="320"></canvas>
-      <canvas id="skyscape"   width="480" height="320"></canvas>
+      <div id="canvases"></div>
+
 
     </div>
 
